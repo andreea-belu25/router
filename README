@@ -1,0 +1,55 @@
+`README`
+
+Am folosit o lista simplu inlantuita pentru a retine pachetele care sunt in asteptarea unui arp reply.
+Pentru gestionarea acestei liste am folosit:
+    - initializare lista: init_list()
+    - alocare celula lista: aloc_cell
+    - insert_elem_beginning_list: inserare pachet la inceputul listei de pachete
+    - remove_elem_from_list: elimina pachet din lista
+
+Pentru retinerea si cautarea facila a unui ip, am creat un arbore astfel: parcurg toti bitii ip-ului pana la terminarea bitilor de 1 din masca. 
+Ma folosesc de un arbore binar in care nodurile corespunzatoare bitilor de 1 se regasesc in partea stanga, iar cele corespunzatoare bitilor 
+de 0 se regasesc in partea dreapta. In arbore pot exista noduri fara valoare (daca prefix-ul format din bitii pana la nodul respectiv nu 
+reprezinta o intrare valida in tabela de routing a routerului).
+
+get_longest_prefix(TArb arb, unit32_t ip)
+    - cauta ip-ul in arbore
+    - parcurg fiecare bit din ip si verific pe ce ramura trebuie sa inaintez (stanga pentru 1 si dreapta pentru 0). 
+    - la fiecare pas retin un prefix temporar egal cu intrarea curenta din arbore.
+
+ICMP:
+    - Se creeaza un pachet nou corespunzator protocolului ICMP.
+    - Pentru acesta se obtine header-ul de ethernet.
+        * Se completeaza destinatia si sursa acestuia astfel: destinatia pachetului initial devine sursa noului pachet 
+        si sursa acesteia devine destinatia noului pachet.
+    - Pentru acesta se obtine header-ul ip.
+        * Se copiaza header-ul IPv4 al pachetului initial. Se updateaza toate campurile necesare.
+    - Pentru acesta se obtine header-ul icmp.
+        * Se calculeaza toate campurile necesare.
+
+    La final, se trimite pachetul pe aceeasi interfata pe care a ajuns pachetul.
+
+IPv4:
+    - Se obtine mac-ul corespunzator interfetei pe care a ajuns pachetul.
+    - Se verifica daca pachetul este destinat routerului.
+    - Se adauga ip-ul sursa al pachetului in tabela arp.
+    - Se calculeaza checksum-ul pe baza checksum-ului retinut anterior si se verifica ca mesajul transmis nu a fost corupt. 
+    In caz contrar, se arunca pachetul. 
+    - Daca ttl-ul este mai mic decat 2 => pachetul este aruncat si este trimis inapoi un pachet ICMP TIME EXCEEDED.
+    - Se verifica daca pachetul este un ECHO REQUEST adresat router-ului, daca da este trimis inapoi un ECHO REPLY.
+    - Se updateaza header-ul IPv4 si se recalculeaza checksum-ul.
+    - Se gaseste cel mai lung prefix (ip-ul care face match cel mai bine), adica urmatorul hop al pachetului. 
+    - In cazul in care nu exista o intrare in tabela ARP pentru urmatorul hop, pachetul este adaugat intr-o lista si este generat un 
+    ARP REQUEST in reteaua respectiva.
+    
+    La final, se trimite pachetul catre urmatorul hop.
+
+ARP:
+    - Se obtine mac-ul corespunzator interfetei pe care a ajuns pachetul.
+    - Se verifica daca pachetul este destinat routerului.
+    - ARP REQUEST:
+        - Se creeaza un packet de tip arp reply si se trimite inapoi.
+        - Se completeaza toate campurile acestui pachet si se trimite pe interfata corespunzatoare.
+    - ARP REPLY: 
+        - Se adauga raspunsul in tabela arp.
+        - Se trimit toate pachetele din lista ce asteptau dupa acest raspuns.
