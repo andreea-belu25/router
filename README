@@ -20,7 +20,6 @@ get_longest_prefix(TArb arb, uint32_t ip)
     - at each step, stores a temporary prefix equal to the current entry in the tree
 
 ICMP:
-----
     - A new packet corresponding to the ICMP protocol is created.
 
     - For this, the ethernet header is obtained.
@@ -34,6 +33,7 @@ ICMP:
         * All necessary fields are calculated.
     
     Finally, the packet is sent on the same interface where the packet arrived.
+
 
 IPv4:
     - The MAC corresponding to the interface where the packet arrived is obtained.
@@ -58,6 +58,7 @@ IPv4:
       an ARP REQUEST is generated in that network.
     
     Finally, the packet is sent to the next hop.
+
 
 ARP:
     - The MAC corresponding to the interface where the packet arrived is obtained.
