@@ -1,55 +1,73 @@
-`README`
+I used a singly linked list to store packets that are waiting for an ARP reply.
 
-Am folosit o lista simplu inlantuita pentru a retine pachetele care sunt in asteptarea unui arp reply.
-Pentru gestionarea acestei liste am folosit:
-    - initializare lista: init_list()
-    - alocare celula lista: aloc_cell
-    - insert_elem_beginning_list: inserare pachet la inceputul listei de pachete
-    - remove_elem_from_list: elimina pachet din lista
+For managing this list I used:
+    - list initialization: init_list()
+    - list cell allocation: aloc_cell
+    - insert_elem_beginning_list: insert packet at the beginning of the packet list
+    - remove_elem_from_list: remove packet from the list
 
-Pentru retinerea si cautarea facila a unui ip, am creat un arbore astfel: parcurg toti bitii ip-ului pana la terminarea bitilor de 1 din masca. 
-Ma folosesc de un arbore binar in care nodurile corespunzatoare bitilor de 1 se regasesc in partea stanga, iar cele corespunzatoare bitilor 
-de 0 se regasesc in partea dreapta. In arbore pot exista noduri fara valoare (daca prefix-ul format din bitii pana la nodul respectiv nu 
-reprezinta o intrare valida in tabela de routing a routerului).
+For easy storage and searching of an IP, I created a tree as follows: I traverse all the bits of the IP 
+until the 1 bits in the mask are exhausted.
 
-get_longest_prefix(TArb arb, unit32_t ip)
-    - cauta ip-ul in arbore
-    - parcurg fiecare bit din ip si verific pe ce ramura trebuie sa inaintez (stanga pentru 1 si dreapta pentru 0). 
-    - la fiecare pas retin un prefix temporar egal cu intrarea curenta din arbore.
+I use a binary tree in which nodes corresponding to 1 bits are found on the left side and those 
+corresponding to 0 bits are found on the right side. In the tree there can exist nodes without values 
+(if the prefix formed by the bits up to that node does not represent a valid entry in the router's 
+routing table).
+
+get_longest_prefix(TArb arb, uint32_t ip)
+    - searches for the IP in the tree
+    - traverses each bit of the IP and checks which branch to advance on (left for 1 and right for 0)
+    - at each step, stores a temporary prefix equal to the current entry in the tree
 
 ICMP:
-    - Se creeaza un pachet nou corespunzator protocolului ICMP.
-    - Pentru acesta se obtine header-ul de ethernet.
-        * Se completeaza destinatia si sursa acestuia astfel: destinatia pachetului initial devine sursa noului pachet 
-        si sursa acesteia devine destinatia noului pachet.
-    - Pentru acesta se obtine header-ul ip.
-        * Se copiaza header-ul IPv4 al pachetului initial. Se updateaza toate campurile necesare.
-    - Pentru acesta se obtine header-ul icmp.
-        * Se calculeaza toate campurile necesare.
+----
+    - A new packet corresponding to the ICMP protocol is created.
 
-    La final, se trimite pachetul pe aceeasi interfata pe care a ajuns pachetul.
+    - For this, the ethernet header is obtained.
+        * The destination and source are filled as follows: the destination of the initial packet 
+          becomes the source of the new packet and its source becomes the destination of the new packet.
+    
+    - For this, the IP header is obtained.
+        * The IPv4 header of the initial packet is copied. All necessary fields are updated.
+    
+    - For this, the ICMP header is obtained.
+        * All necessary fields are calculated.
+    
+    Finally, the packet is sent on the same interface where the packet arrived.
 
 IPv4:
-    - Se obtine mac-ul corespunzator interfetei pe care a ajuns pachetul.
-    - Se verifica daca pachetul este destinat routerului.
-    - Se adauga ip-ul sursa al pachetului in tabela arp.
-    - Se calculeaza checksum-ul pe baza checksum-ului retinut anterior si se verifica ca mesajul transmis nu a fost corupt. 
-    In caz contrar, se arunca pachetul. 
-    - Daca ttl-ul este mai mic decat 2 => pachetul este aruncat si este trimis inapoi un pachet ICMP TIME EXCEEDED.
-    - Se verifica daca pachetul este un ECHO REQUEST adresat router-ului, daca da este trimis inapoi un ECHO REPLY.
-    - Se updateaza header-ul IPv4 si se recalculeaza checksum-ul.
-    - Se gaseste cel mai lung prefix (ip-ul care face match cel mai bine), adica urmatorul hop al pachetului. 
-    - In cazul in care nu exista o intrare in tabela ARP pentru urmatorul hop, pachetul este adaugat intr-o lista si este generat un 
-    ARP REQUEST in reteaua respectiva.
+    - The MAC corresponding to the interface where the packet arrived is obtained.
     
-    La final, se trimite pachetul catre urmatorul hop.
+    - It is verified whether the packet is destined for the router.
+    
+    - The source IP of the packet is added to the ARP table.
+    
+    - The checksum is calculated based on the previously stored checksum and it is verified that the 
+      transmitted message was not corrupted. Otherwise, the packet is dropped.
+    
+    - If the TTL is less than 2 => the packet is dropped and an ICMP TIME EXCEEDED packet is sent back.
+    
+    - It is verified whether the packet is an ECHO REQUEST addressed to the router; if yes, an ECHO 
+      REPLY is sent back.
+    
+    - The IPv4 header is updated and the checksum is recalculated.
+    
+    - The longest prefix (the IP that matches best) is found, i.e., the next hop of the packet.
+    
+    - In case there is no entry in the ARP table for the next hop, the packet is added to a list and 
+      an ARP REQUEST is generated in that network.
+    
+    Finally, the packet is sent to the next hop.
 
 ARP:
-    - Se obtine mac-ul corespunzator interfetei pe care a ajuns pachetul.
-    - Se verifica daca pachetul este destinat routerului.
+    - The MAC corresponding to the interface where the packet arrived is obtained.
+    
+    - It is verified whether the packet is destined for the router.
+    
     - ARP REQUEST:
-        - Se creeaza un packet de tip arp reply si se trimite inapoi.
-        - Se completeaza toate campurile acestui pachet si se trimite pe interfata corespunzatoare.
-    - ARP REPLY: 
-        - Se adauga raspunsul in tabela arp.
-        - Se trimit toate pachetele din lista ce asteptau dupa acest raspuns.
+        - An ARP reply packet is created and sent back.
+        - All fields of this packet are filled and it is sent on the corresponding interface.
+    
+    - ARP REPLY:
+        - The response is added to the ARP table.
+        - All packets from the list that were waiting for this response are sent.
